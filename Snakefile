@@ -45,7 +45,7 @@ rule truthmatch_simulation:
     output:
         "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root"
     shell:
-        "touch {output}"
+        "python src/process.py --input {input} --output {output}"
 
 rule preselect:
     input:
@@ -54,7 +54,7 @@ rule preselect:
     output:
         "scratch/{filetype}/{year}/preselected/beauty2darkmatter_{i}.root"
     shell:
-        "touch {output}"
+        "python src/process.py --input {input} --output {output}"
 
 rule select:
     input:
@@ -62,7 +62,7 @@ rule select:
     output:
         "scratch/{filetype}/{year}/full_sel/beauty2darkmatter_{i}.root"
     shell:
-        "touch {output}"
+        "python src/process.py --input {input} --output {output}"
 
 rule post_process:
     input:
@@ -70,7 +70,7 @@ rule post_process:
     output:
         "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root"
     shell:
-        "touch {output}"
+        "python src/process.py --input {input} --output {output}"
 
 rule merge_files_per_year:
     """
@@ -93,7 +93,7 @@ rule merge_files_per_year:
         "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root"
     run:    
         print("Merging {input} into {output}".format(input=input, output=output))
-        shell("touch {output}")
+        shell("python src/process.py --input {input} --output {output}")
 
 rule merge_years:
     # aggregate the per-year samples into a single sample for the full integrated luminosity in data,
@@ -112,7 +112,7 @@ rule merge_years:
         "scratch/{filetype}/aggregated_pre_nn/beauty2darkmatter.root"
     run:
         print("Reading in {input} and merging into {output}".format(input=input, output=output))
-        shell("touch {output}")
+        shell("python src/process.py --input {input} --output {output}")
 
 rule train_neural_network:
     """
@@ -125,8 +125,9 @@ rule train_neural_network:
     output:
         "nn/tuned_neural_network.yml" # NOTE: dynamically generated output and directory
     run:
+        # NOTE how the two inputs are individually provided as arguments to the python script
         print("Training the neural network on {input.data} and {input.mc}".format(input=input, output=output))
-        shell("touch {output}")
+        shell("python src/process.py --input {input.data} {input.mc} --output {output}") # in the script, argparse has nargs=+ for the input to accept multiple inputs
 
 rule nn_inference: 
     """
@@ -141,7 +142,7 @@ rule nn_inference:
         "scratch/{filetype}/post_nn/beauty2darkmatter.root"
     run:
         print("Running the inference on {input}".format(input=input))
-        shell("touch {output}")
+        shell("python src/process.py --input {input.samples} {input.nn} --output {output}")
 
 rule sweight_data:
     # typically, one can expect some data-driven density estimation or data-mc correction task performed per-year
@@ -161,7 +162,7 @@ rule sweight_data:
         "scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root",
     run:
         print("Sweighting {input.data} to with input from simulations: {input.mc}".format(input=input, output=output))
-        shell("touch {output}")
+        shell("python src/process.py --input {input.data} {input.mc} --output {output}")
 
 rule merge_years_pre_fit:
     # aggregate the per-year samples into a single sample for the full integrated luminosity in data,
@@ -179,7 +180,7 @@ rule merge_years_pre_fit:
         
         # data
         print("Start with data: merge {input_data} into {output_data}".format(input_data=input.data, output_data=output.data))
-        shell("touch {output.data}")
+        shell("touch {output.data}") # you can think of this as placeholder for hadd -fk {output.data} {input.data}
 
         # simulation
         print("Now with simulation: merge {input_mc} into {output_mc}".format(input_mc=input.mc, output_mc=output.mc))
@@ -196,4 +197,7 @@ rule fit:
         "results/fit_results.yml" # NOTE: dynamically generated output and directory
     run:
         print("Running the fit on {input.data} and {input.mc}".format(input=input, output=output))
-        shell("touch {output}")
+        
+        # placecholder for, say, `python src/fit.py --input {input.data} {input.mc}`, where
+        # the output file gets generated automatically and picked up by snakemake (it'll ley you know it doesn't find it!) 
+        shell("python src/process.py --input {input} --output {output}") 

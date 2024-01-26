@@ -9,6 +9,7 @@ __email__ = "blaise.delaney at cern.ch"
 import os
 import unittest
 from typing import Any
+from pathlib import Path
 
 
 class AnalysisOperation:
@@ -43,11 +44,15 @@ class AnalysisOperation:
         self._output = value
 
     def process(self) -> None:
+        """Process the input and write the output."""
+        # book the path
+        Path(self._output).parent.mkdir(parents=True, exist_ok=True)
+        # emulate processing and writing
         AnalysisOperation.touch(self._output)
 
     @staticmethod
     def touch(filename: str) -> None:
-        with open(filename, "a"):
+        with open(filename, "w"):
             pass
 
     def __str__(self) -> str:
