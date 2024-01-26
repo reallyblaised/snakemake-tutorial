@@ -82,7 +82,20 @@ Inspect the `dag.pdf` and `rulegraph.pdf` visualisations. Following the evolutio
 
 ### Benchmarking 
 
-### Clean up after yourself 
+### Clean up after yourself
+
+Notice the snippet at the beginning of the `Snakefile`: 
+
+```python
+onsuccess:
+    """
+    This is a special directive that is executed when the workflow completes successfully
+    """
+    print("=== Workflow completed successfully. Congrats! Hopefully you got some interesting results. ===")
+    # good practice: clean up the workspace metadata
+    shutil.rmtree(".snakemake/metadata")
+```
+Upon completing the pipeline successfully, unwanted metadata files (which might blow up your local area if left unchecked over LHC-sized datasets and jobs) will be automatically deleted. I suggest you extend this practice to any log files you may not want to inspect after running the worflow successfully. _Note_: deletion will occur if and only if the pipeline has run successfully.
 
 ### Protected and temporary outputs
 
