@@ -79,14 +79,12 @@ rule merge_files_per_year:
         print("Merging {input} into {output}".format(input=input, output=output))
         shell("touch {output}")
 
-
-
 rule merge_years:
     # aggregate the per-year samples into a single sample for the full integrated luminosity in data,
     # and the corresponding simulation sample set 
     input:
         lambda wildcards: [
-            "scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root".\
+            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root".\
             format(filetype=wildcards.filetype, year=year)\
             for year in years
         ] if wildcards.filetype == "data" else [
@@ -95,7 +93,7 @@ rule merge_years:
             for year in years
         ]
     output:
-        "scratch/{filetype}/full_lumi/beauty2darkmatter.root"
+        "scratch/{filetype}/aggregated_pre_nn/beauty2darkmatter.root"
     run:
         print("Reading in {input} and merging into {output}".format(input=input, output=output))
         shell("touch {output}")
@@ -117,32 +115,55 @@ rule nn_inference:
     """
     Run the inference on the aggregated data and simulation samples
     """
-            lambda wildcards: [
-            "scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root".\
-            format(filetype=wildcards.filetype, year=year)\
-            for year in years
-        ] if wildcards.filetype == "data" else [
-            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root".\
-            format(filetype=wildcards.filetype, year=year)\
-            for year in years
-        ]
+    input:
+        "scratch/{filetype}/subjob_merged/beauty2darkmatter.root"
+    output:
+        "scratch/{filetype}/post_nn/beauty2darkmatter.root"
+    run:
+        print("Running the inference on {input}".format(input=input))
+        shell("touch {output}")
 
 rule sweight_data:
     # typically, one can expect some data-driven density estimation or data-mc correction task performed per-year
+    # assume a sFit stage: https://inspirehep.net/literature/644725
     input:
-        mc = expand(
-            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root",
-            filetype="mc", year=years
-        ),
-        data = expand(
-            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root",
-            filetype="data", year=years
-        )
+        # decouple the input into the data and mc classes; 
+        # assume an analysis executable would use the sig to fix fit parameters in the sFit to data
+        data = lambda wildcards: [
+            "scratch/{filetype}/{year}/post_nn/beauty2darkmatter.root".\
+            format(filetype="data", year=wildcards.year)\
+        ], 
+        mc = lambda wildcards: [
+            "scratch/{filetype}/{year}/post_nn/beauty2darkmatter.root".\
+            format(filetype="mc", year=wildcards.year)\
+        ],
     output:
-        "scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root"
+        "scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root",
     run:
         print("Sweighting {input.data} to with input from simulations: {input.mc}".format(input=input, output=output))
         shell("touch {output}")
+
+rule merge_years_pre_fit:
+    # aggregate the per-year samples into a single sample for the full integrated luminosity in data,
+    # and the corresponding simulation sample set 
+    input:
+        data = expand("scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root", filetype="data", year=years),
+        mc = expand("scratch/{filetype}/{year}/post_nn/beauty2darkmatter.root", filetype="mc", year=years),
+    output:
+        data = "scratch/data/full_lumi/beauty2darkmatter.root",
+        mc = "scratch/mc/full_lumi/beauty2darkmatter.root"
+    run:
+        # decouple the aggregation of data and mc samples in python & bash. Not the most elegant solution, but it 
+        # showcases the flexibility of the in-scope python operations
+        print("Merging separately sweighted data and simulation samples into the appropriate output file")
+        
+        # data
+        print("Start with data: merge {input_data} into {output_data}".format(input_data=input.data, output_data=output.data))
+        shell("touch {output.data}")
+
+        # simulation
+        print("Now with simulation: merge {input_mc} into {output_mc}".format(input_mc=input.mc, output_mc=output.mc))
+        shell("touch {output.mc}")
 
 rule fit:
     """
