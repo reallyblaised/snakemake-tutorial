@@ -21,7 +21,9 @@ for data in data_variations:
         dir_path.mkdir(parents=True, exist_ok=True)
 
         # Create the files in the directory
-        for i in range(10):
+        for i in range(
+            10
+        ):  # consider the simple case of 3 files per year, per data type
             file_path = dir_path / f"beauty2darkmatter_{i}.root"
             file_path.touch()
 

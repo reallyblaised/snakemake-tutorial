@@ -6,15 +6,31 @@ scratch/{data, mc}/{2011, 2012, 2016, 2017, 2018}/beauty2darkmatter_{i}.root
 __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at cern.ch"
 
+# place necessary python imports here 
+import shutil
+
 # global-scope config
 configfile: "config/main.yml" # NOTE: colon synax 
-
-# place necessary python imports here 
-
 # global-scope variables, fetched from the config file in config/main.yml
 years = config["years"] 
 
-rule all:
+
+# end of execution: communicate the success or failure of the workflow and clean up the workspace
+onsuccess:
+    """
+    This is a special directive that is executed when the workflow completes successfully
+    """
+    print("=== Workflow completed successfully. Congrats! Hopefully you got some interesting results. ===")
+    # good practice: clean up the workspace metadata
+    shutil.rmtree(".snakemake/metadata")
+onerror:
+    """
+    This is a special directive that is executed when the workflow fails
+    """
+    print("=== ATTENTION! Workflow failed. Please refer to logging and debugging sections of the tutorial. ===")
+
+
+rule all: # NOTE: the `all` rule is a special directive that is executed by default when the workflow is invoked
     """
     Target of the worflow; this sets up the direct acyclic graph (DAG) of the workflow
     """
@@ -103,8 +119,9 @@ rule train_neural_network:
     Train the neural network on the aggregated data and simulation samples
     """
     input:
-        data = "scratch/data/full_lumi/beauty2darkmatter.root",
-        mc = "scratch/mc/full_lumi/beauty2darkmatter.root"
+        # decouple the data and mc. Realistically one would have to provide both classes to a python NN training/inference executable
+        data = "scratch/data/aggregated_pre_nn/beauty2darkmatter.root",
+        mc = "scratch/mc/aggregated_pre_nn/beauty2darkmatter.root"
     output:
         "nn/tuned_neural_network.yml" # NOTE: dynamically generated output and directory
     run:
@@ -116,7 +133,10 @@ rule nn_inference:
     Run the inference on the aggregated data and simulation samples
     """
     input:
-        "scratch/{filetype}/subjob_merged/beauty2darkmatter.root"
+        # fetch the tuned neural network from the previous rule
+        nn = "nn/tuned_neural_network.yml",
+        # samples on which we want to run the inference
+        samples = "scratch/{filetype}/subjob_merged/beauty2darkmatter.root"
     output:
         "scratch/{filetype}/post_nn/beauty2darkmatter.root"
     run:
@@ -173,7 +193,7 @@ rule fit:
         data = "scratch/data/full_lumi/beauty2darkmatter.root",
         mc = "scratch/mc/full_lumi/beauty2darkmatter.root"
     output:
-        "results/fit_results.yml"
+        "results/fit_results.yml" # NOTE: dynamically generated output and directory
     run:
         print("Running the fit on {input.data} and {input.mc}".format(input=input, output=output))
         shell("touch {output}")

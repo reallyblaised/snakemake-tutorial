@@ -36,15 +36,45 @@ The tutorial is divided into several sections. First, we'll start with a basic i
 
 ## A prototypical pipeline
 
-Typically, you'll find that the `.root` files you need to process in your anals
+Typically, you'll find that the `.root` files you need to process in your analysis are stored in a dedicated area. Let's emulate these conditions:
+
+```bash
+$ python src/utils/generate_data_mc_files.py 
+```
+
+This command will touch empty files in the path `scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root`. 
+
+**For LHC users**: if your files are store on `eos` and you need employ the `xrootd` protocol, see the section _Accessing eos_ below.
+
+Now we have everything to get started. Let's inspect the `Snakefile`: **text goes here**.
+
+### Running the pipeline
+
+In the same directory where the `Snakefile` lives, execute the command
+
+```bash
+$ snakemake --cores <number of cores; if none specified, use all available by default> 
+```
+
+### Visualising the pipeline
+
+Upon successful completion of the pipeline, we can inspect the anatomy of the pipeline. That is, the overall DAG - showing the evolution of each input file - and the rule sequence, in order of execution. Notice how we introduced non-linearities in the workflow. Data-monte carlo comparisons, neural network training and evaluation, and similar other steps will force us to define complicated workflows.
+
+```bash
+$ snakemake --rulegraph | dot -Tpdf > rulegraph.pdf
+```
+
+```bash
+$ snakemake --dag | dot -Tpdf > dag.pdf
+```
+
+Inspect the `dag.pdf` and `rulegraph.pdf` visualisations. Following the evolution of each file through the rules, can you convince yourself the job flow matches the analysis design? 
 
 ## Interfacing the Snakemake pipeline with the SubMIT cluster 
 
 ## Useful commands 
 
 ### Dry runs, forced runs 
-
-### Visualising the pipeline
 
 ### Debugging
 
@@ -56,7 +86,7 @@ Typically, you'll find that the `.root` files you need to process in your anals
 
 ### Protected and temporary outputs
 
-### Accessing eos 
+### Accessing eos
 
 ## Advanced 
 
