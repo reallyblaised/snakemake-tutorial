@@ -7,19 +7,34 @@ Disclaimer: no LHCb data has been used to generate this tutorial.
 
 Assuming you have a [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) installation in your user area:
 
-1. [**Optional**, but recommended] Install [mamba]():
+1. **Preliminary step**: install [Mamba](https://github.com/mamba-org/mamba), essentially an accelerated version of the [Conda](https://docs.conda.io/en/latest/) package manager. 
+The best thing of Mamba is that you can using `mamba` as a drop-in replacement for virtually all `conda` commands.
+Installing Mamba can be enacted in two ways: 
+
+   (a) [The way I wrote this set up this tutorial] If you want to operate within a Conda installation, you can proceed to create a new environment, `snakemake_tutorial`, in which you can install Mamba: 
    ```bash
-   $ conda install -n base -c conda-forge mamba
+   $ conda create -c conda-forge -n snakemake_tutorial mamba
+   $ conda activate snakemake_tutorial
    ```
-   Mamba is a faster package manager than Conda. You can also directly install Mamba via its own [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge) Python3 distribution, which is a direct replacement for Conda. You can use Mamba with virtually all Conda commands, using `mamba` as a drop-in replacement for `conda`;
-2. Install a bespoke environment for this tutorial:
+   Test the correct installation of Mamba by typing in the terminal
    ```bash
-   $ mamba create -c conda-forge -c bioconda -n snakemake_tutorial snakemake
+   $ mamba
    ```
-3. Activate the environment:
-   ```
+   after which you should see a familiar `conda` blurb of all possible commands and flags.
+
+   (b) Alternatively, you can also directly install Mamba via its own [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge) Python3 distribution, which is a direct replacement for Conda as a whole. After completing this step, you have access to the full `mamba` command suite. Let's setup a bespoke environment for this tutorial:
+
+   ```bash
+   $ mamba create -n snakemake_tutorial 
    $ mamba activate snakemake_tutorial
+   ``` 
+   In both cases, you should end up with a `snakemake_tutorial` environment containing a Mamba installation. *N.B.*: one should be able to install Snakemake using solely Conda, but last I check Mamba was the preferred option.
+
+2. Install Snakemake in the env:
+   ```bash
+   $ mamba install -c conda-forge -c bioconda snakemake
    ```
+
 3. Verify the correct Snakemake installation:
    ```bash
    $ snakemake --help
@@ -98,6 +113,10 @@ onsuccess:
 Upon completing the pipeline successfully, unwanted metadata files (which might blow up your local area if left unchecked over LHC-sized datasets and jobs) will be automatically deleted. I suggest you extend this practice to any log files you may not want to inspect after running the worflow successfully. _Note_: deletion will occur if and only if the pipeline has run successfully.
 
 ### Protected and temporary outputs
+
+One has the option to enforce two special output-file status conditions:
+
+1. **Temporary files**: these are 
 
 ### Accessing eos
 
