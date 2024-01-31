@@ -1,6 +1,6 @@
 """
 Prototycal workflow for the analysis on data split into many files located in the paths
-scratch/{data, mc}/{2011, 2012, 2016, 2017, 2018}/beauty2darkmatter_{i}.root
+scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
 """
 
 __author__ = "Blaise Delaney"
@@ -82,12 +82,12 @@ rule merge_files_per_year:
         lambda wildcards: [
             "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root".\
             format(filetype=wildcards.filetype, year=wildcards.year, i=i)\
-            for i in range(10) 
+            for i in range(3) 
         ] if wildcards.filetype == "mc"\
         else [
             "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root".\
             format(filetype=wildcards.filetype, year=wildcards.year, i=i)\
-            for i in range(10) 
+            for i in range(3) 
         ]
     output:
         "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root"
