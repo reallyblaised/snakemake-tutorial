@@ -10,6 +10,35 @@ Get in touch: `blaised at mit.edu`.
 
 ## Table of Contents
 
+
+- [Setup](#setup)
+- [Introduction](#introduction)
+- [A basic pipeline](#a-basic-pipeline)
+    - [Global-scope config](#global-scope-config)
+    - [Rule definition and workflow assembly](#rule-definition-and-workflow-assembly)
+    - [Running the pipeline](#running-the-pipelihe)
+    - [Visualising the pipeline](#visualising-the-pipeline)
+    - [Re-running the pipeline](#re-running-the-pipeline)
+- [A slightly more complex example](#a-slightly-more-complex-pipeline)
+- [A quasi-realistic example](#a-quasi-relatistic-example)
+- [Miscellaneous topics](#miscellaneous-topics)
+    - [Interfacing Snakemake with subMIT](#interfacing-the-snakemake-pipeline-with-the-submit-cluster)
+        - [Rule-specific subMIT partitions](#rule-specific-submit-partitions)
+        - [HTCondor](#htcondor)
+    - [Dryruns and debugging](#dry-runs--debugging)
+    - [Logging](#logging)
+    - [Benchmarking rule performance](#benchmarking)
+    - [Additional rule paramters](#additional-rule-paremeters)
+    - [Temporary output files](#temporary-output-files)
+    - [Protected output files](#protected-output-files)
+- [Advance topics](#advanced)
+    - [Checkpoints](#checkpoints)
+    - [Accessing EOS](#accessing-eos)
+- [Addendum: topics not covered but likely of interest](#topics-not-covered-here-but-likely-of-interest)
+
+
+
+
 ## Setup
 
 Assuming you have a [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) installation in your user area:
@@ -47,7 +76,7 @@ Installing Mamba can be enacted in two ways:
    $ snakemake --help
    ```
 
-## Overview
+## Introduction
 
 The power of Snakemake lies in processing several files via independent jobs. These, in turn, are regulated by user-defined _rules_, which can accommodate bash and Python commands for I/O, file processing, logging, benchmarking and alike. 
 
@@ -1229,7 +1258,7 @@ before running Snakemake. You can also export this certificate to have it last l
 I suggest you also have a look at [wildcard constraints](https://snakemake.readthedocs.io/en/stable/tutorial/additional_features.html#constraining-wildcards) for more complex cases related to spanning remote file paths. I decided to omit a snippet here to avoid leaking too much private LHCb information. If you're an LHCb user, feel free to get in touch for more info.
 
 ---
- 
+
 *That's all, folks!* I have listed below a set of topics not covered here that might be of interest.
 I hope it was useful. Thanks for reading.
 
