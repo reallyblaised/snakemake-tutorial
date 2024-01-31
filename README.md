@@ -277,7 +277,7 @@ and
 ```bash
 $ snakemake --cores --until <rule_name> [--forceall]
 ```
-allow you to run the pipeline from and until a specific rule in the DAG. 
+allow you to run the pipeline from and until a specific rule in the DAG, respectively.
 
 
 ## A slightly more complex pipeline
