@@ -1,4 +1,4 @@
-# Snakemake@SubMIT for scientific discovery at LHCb
+# Snakemake@subMIT for scientific discovery at LHCb
 
 ![logo](assets/logo.png)
 
