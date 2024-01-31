@@ -1228,8 +1228,10 @@ before running Snakemake. You can also export this certificate to have it last l
 
 I suggest you also have a look at [wildcard constraints](https://snakemake.readthedocs.io/en/stable/tutorial/additional_features.html#constraining-wildcards) for more complex cases related to spanning remote file paths. I decided to omit a snippet here to avoid leaking too much private LHCb information. If you're an LHCb user, feel free to get in touch for more info.
 
-> *That's all, folks!* I have listed below a set of topics not covered here that might be of interest.
-> I hope it was useful. Thanks for reading.
+---
+ 
+*That's all, folks!* I have listed below a set of topics not covered here that might be of interest.
+I hope it was useful. Thanks for reading.
 
 
 ## Topics not covered here but likely of interest
