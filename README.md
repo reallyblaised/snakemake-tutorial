@@ -615,9 +615,176 @@ which generates the following DAG plot:
 
 ## Miscellaneous topics
 
-### Interfacing the Snakemake pipeline with the SubMIT cluster 
+### Interfacing the Snakemake pipeline with the subMIT cluster 
 
-The easiest way to work with SubMIT is via Slurm: 
+The easiest way to work with subMIT is interfacing with Slurm. To do so, you'll need a Slurm profile with a dedicated config file. You can find the config I typically use `/slurm_simple/config.yml`. Inspecting this, you'll see a number of options that we are covered later in this tutorial, plus Slurm-specific options:
+
+```yaml
+# ./slurm_simple/config.yml
+cluster:
+  mkdir -p slurm_logs/{rule} &&
+  sbatch
+    --partition={resources.partition}
+    --job-name=smk-{rule}-{wildcards}
+    --output=slurm_logs/{rule}/{rule}-{wildcards}-%j.out
+    --error=slurm_logs/{rule}/{rule}-{wildcards}-%j.err
+    --time={resources.time}
+    --account=<your submit username>
+    --mem={resources.mem_mb}
+default-resources:
+  - partition=submit
+  - time="48:00:00"
+  - mem_mb=2000
+restart-times: 1
+max-status-checks-per-second: 1
+latency-wait: 3600
+jobs: 5000
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+use-conda: True
+```
+
+Let's break it down. The section
+
+```yaml
+cluster:
+  mkdir -p slurm_logs/{rule} &&
+  sbatch
+    --partition={resources.partition}
+    --job-name=smk-{rule}-{wildcards}
+    --output=slurm_logs/{rule}/{rule}-{wildcards}-%j.out
+    --error=slurm_logs/{rule}/{rule}-{wildcards}-%j.err
+    --time={resources.time}
+    --account=<your submit username>
+    --mem={resources.mem_mb}
+```
+is a template for the `sbatch` command, which is used to submit jobs to Slurm. Specifically,
+
+- `mkdir -p slurm_logs/{rule}` creates a directory for log files specific to each rule;
+- `--partition={resources.partition}` specifies the Slurm partition to submit the job to. This is dynamic and can be set per rule in the Snakemake file (more later);
+- `--job-name` sets a unique name for each job using the rule name and wildcards;
+- `--output` and `--error` define paths for stdout and stderr logs, including the job ID (%j) for uniqueness;
+- `--time`, `--account`, and `--mem` set the job's maximum runtime, the user account for billing, and the memory limit, respectively.
+
+```yaml
+default-resources:
+  - partition=submit
+  - time="48:00:00"
+  - mem_mb=2000
+```
+Defines default resource specifications for jobs. Unless specified otherwise, these are the values provided to the Slurm submission command (more on this later). These should be self-expanatory.
+
+Additional options provide typical Snakemake directives. In addition to the arguments covered in this tutorial, the following Snakemake flags are used:
+
+- `restart-times: 1` specifies the number of times a failing job should be automatically restarted;
+- `max-status-checks-per-second: 1` limits the frequency of status checks to prevent overloading the Slurm scheduler;
+- `latency-wait: 3600` sets a waiting time (in seconds) to allow for file system delays. Useful in ensuring all files are written before the next rule starts;
+- `jobs: 5000` sets the maximum number of Slurm jobs that can be simultaneously submitted (start with a small number first!);
+- `rerun-incomplete: True` snsures that any incomplete jobs (perhaps due to system failures) are automatically rerun (*e.g.* in case you halted the workflow execution with `ctrl+c` or the ssh tunnelling dropped);
+- `use-conda: True` allows Snakemake to manage environments using Conda, which can be useful for handling dependencies.
+
+With `slurm_simple/config.yml` set appropriately, you can run the pipeline on the selected subMIT partition: 
+```bash
+$ snakemake --profile ./slurm_simple
+```
+
+#### Rule-specific subMIT partitions
+
+It may be useful to change the subMIT partition for a subset of jobs. 
+
+Here is an example, taken from the pipeline used to train and deploy the neural networks presented in the preprints [arXiv:2306.09873](https://arxiv.org/abs/2306.09873) and [arXiv:2312.14265](https://arxiv.org/abs/2312.14265):
+
+```python
+rule train:
+    """Execute the training and persist the model"""
+    input:
+        train_sh_script = f"{config['key']}_{config['exec_dir']}"+"/{_lambda}/train/run_training.sh",
+        best_model_spec = f"{config['key']}_{config['exec_dir']}"+"/{_lambda}/train/model_spec.json" # only run if best model spec exists
+    output:
+        training_results = temp(f"/data/submit/blaised/hlt2topo_sp/scratch/train/{config['key']}_{config['exec_dir']}"+"/{_lambda}/train/"+config['key']+"_Train_Results.pkl"),
+        trained_model = f"{config['key']}_{config['exec_dir']}"+"/{_lambda}/train/trained_model.pt"
+    log:
+        f"log/{config['key']}/{config['key']}_{config['exec_dir']}"+"/{_lambda}/run_training.log"
+    resources:
+        partition = "submit-gpu", # run this on the GPU partition
+        gpu=1
+    run:
+        shell("{input.train_sh_script} &> {log}")
+```
+where, in the field `resources`, I switch to the `submit-gpu` partition **for this rule execution only**, allocating 1 GPU to training the neural net. This will overwrite the default parameters set in `slurm_simple/config.yml`.
+
+#### HTCondor
+
+I don't have experience (yet) with interfacing Snakemake with HTCondor on subMIT. However, I used to do so in my PhD institute, where `./wrappers/condor_wrapper.py` shown below did the trick. It may come in handy as a template for your experiments with Snakemake + HTCondor.
+
+```python
+#!/usr/bin/env python
+
+# Wrapper to submit a script to condor using a custom job script.
+#
+# __author__: Blaise Delaney
+# __email__: blaise.delaney at cern.ch
+
+# ===========================================================================
+# $ snakemake --cluster wrappers/condor_wrapper.py --jobs 10 target file
+# ===========================================================================
+
+from tempfile import NamedTemporaryFile
+from snakemake.utils import read_job_properties
+import subprocess
+import sys
+import os
+
+# Get the jobscript, and the properties for this job
+jobscript = sys.argv[1]  # condor submission wrapper
+job_props = read_job_properties(
+    jobscript
+)  # extrapolate job submission config for conda from wrapper
+jobid = job_props["jobid"]
+
+# Create a directory for condor logs, if this doesn't exist
+logdir = os.path.abspath("CondorLogs")
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+
+# Open a temporary file for the job submission script
+with NamedTemporaryFile("w") as sub_file:
+    # Condor environment
+    sub_file.write("universe = vanilla \n")
+    sub_file.write("copy_to_spool = true \n")
+    sub_file.write("getenv=True\n")  # copy over conda env
+    sub_file.write("should_transfer_files = YES \n")
+    sub_file.write("when_to_transfer_output = ON_EXIT_OR_EVICT \n")
+    sub_file.write("environment = CONDOR_ID=$(Cluster).$(Process) \n")
+    sub_file.write('+DESIRED_Sites = "mit_tier3"')  # run on MIT T2
+
+    # # Requirements - run on CC7 only
+    # sub_file.write(
+    #     'Requirements = ( Arch == "X86_64" && OSTYPE == "CC7" &&  POOL == "GEN_FARM" ) \n'
+    # )
+
+    # Rank hosts according to floating point speed
+    sub_file.write("Rank = kflops \n")
+
+    # Memory requirement
+    sub_file.write("request_memory = 3000 \n")
+
+    # Condor Output
+    sub_file.write(f"output = {logdir}/out.{jobid} \n")
+    sub_file.write(f"error  = {logdir}/err.{jobid} \n")
+    sub_file.write(f"Log    = {logdir}/log.{jobid} \n")
+
+    # Job script submission
+    sub_file.write(f"Executable = {jobscript} \n")
+    sub_file.write("Queue \n")
+
+    # Now submit this condor script, and delete the temporary file
+    sub_file.flush()
+    subprocess.call(["condor_submit", sub_file.name])
+```
+
 
 
 ### Dry runs & debugging
