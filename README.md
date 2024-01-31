@@ -8,7 +8,7 @@ Disclaimer: no LHCb data has been used to generate this tutorial.
 
 Get in touch: `blaised at mit.edu`.
 
-
+## Table of Contents
 
 ## Setup
 
@@ -97,7 +97,11 @@ This setup emulates the typical split between data and Monte Carlo simulations t
 
 **For LHC users**: if your files are store on `eos` and you need employ the `xrootd` protocol, see the section _Accessing eos_ below.
 
-Now we have everything to get started. Let's start at the beginnig: in our `Snakefile`, we start by importing global-scope parameters:
+Now we have everything to get started.
+
+### Global-scope config 
+
+Let's start at the beginnig: in our `Snakefile`, we start by importing global-scope parameters:
 
 ```python
 
@@ -120,6 +124,8 @@ years = ["2012", "2018"]
 during the execution of the pipeline. In fact, all typical python commands can be executed in-scope within the `Snakefile`. 
 
 Pro tip: `breakpoint()` can be inserted whenever you need a quick-and-dirty check during the pipeline execution. 
+
+### Rule definition and workflow assembly
 
 Let's inspect the rest of the Snakefile: 
 
@@ -719,13 +725,32 @@ The benchmark directive is added, specifying a path to save the benchmark file. 
 
 ### Additional rule paremeters
 
-### Clean up after yourself
-
-
-
-Notice the snippet at the beginning of the `Snakefile`: 
+Snakemake affords the flexibility of a directive for any other path that might share the same wildcards as the input and output files. Here is an example taken from an LHCb measurement: 
 
 ```python
+rule truthmatch:
+    # impose the correct ID to the candidates, and the correct decay generalogy
+    input:
+        data_storage+"/{stream}/{filetype}/relabelled/{channel}/{year}/{magpol}/{prefix}_{mode}.root"
+    output:
+        (data_storage+"/{stream}/{filetype}/truthmatched/{channel}/{year}/{magpol}/{prefix}_{mode}.root")
+    params:
+        truth_selection = lambda wildcards: config["truthmatching"][wildcards.mode]
+    log: 
+        # decouple logging: log.report is used to track the efficiency; log.snake for debugging
+        report = "reports/{stream}/{filetype}/truthmatched/{channel}/{year}/{magpol}/{prefix}_{mode}.log",
+        snake = "log/{stream}/{filetype}/truthmatched/{channel}/{year}/{magpol}/{prefix}_{mode}.log"
+    run:
+        shell("python ./src/evt_select.py --selection {params.truth_selection} --input {input} --output {output} --log {log.report} &> {log.snake}")
+```
+In this slightly complex example, I read from `config` a dictionary of truth-matching selections (the details of which are not important). I thereafter ise the value assigned to the wildcard `mode` when building the DAQ as a key in the truth-matching dictionary. In essence, it is a flexible way to look up a selection string, set as a global-scope variable defined in a dedicated [config file](#global-scope-config). The string can be read in by the rule via the directive `params` and thereafter passed to the `run` directive via Snakemake's wildcard and variable expansion syntax, `{params.truth_selection}`.
+
+### Clean up after yourself
+
+Notice the snippet at the beginning of the [quasi-realistic analysis](#a-quasi-relatistic-example) `Snakefile` 
+
+```python
+# NOTE: don't forget `import shutil` in the Snakefile header
 onsuccess:
     """
     This is a special directive that is executed when the workflow completes successfully
@@ -734,20 +759,110 @@ onsuccess:
     # good practice: clean up the workspace metadata
     shutil.rmtree(".snakemake/metadata")
 ```
-Upon completing the pipeline successfully, unwanted metadata files (which might blow up your local area if left unchecked over LHC-sized datasets and jobs) will be automatically deleted. I suggest you extend this practice to any log files you may not want to inspect after running the worflow successfully. _Note_: deletion will occur if and only if the pipeline has run successfully.
+Upon completing the pipeline successfully, unwanted metadata (which might blow up your local area if left unchecked over LHC-sized datasets and jobs) will be automatically deleted. I suggest you extend this practice to any log files you may not want to inspect after running the worflow successfully. _Note_: deletion will occur if and only if the pipeline has run successfully.
 
-### Protected and temporary outputs
+### Temporary output files
 
 One has the option to enforce two special output-file status conditions:
 
-1. **Temporary files**: these are 
+1. **Temporary files**: will be automatically deleted once the generating rule, and the subsequent rule inheriting this output, have been executed successfully. 
+```python
+rule somerule:
+...
+output: 
+    temp("a/processed/{data}/file.root")
+```
+Pragramatically, I find this quite useful to enforce an otherwise-ambiguous rule execution order, as illustrated by the example below. Please ignore the specifics of the rules. The key point is that rule `validate_ws` performs a set of sanity checks. If these are executed without error, a dummy temporary file, `temp("ws_validation.done")` is touched to signal the end of `rule validate_ws`. 
+The dummy file is then strictly required as input to the rule `post_mva_select`. This practice ensures the correct execution of `validate_ws` before `post_mva_select`. Without the dummy file, the former could be neglected by the DAG in the limit where `validate_ws` does not generate bespoke `.root` or `.pdf` files (we could spell out the paths of these in the output, but *a priori* we may not know how many `.pdf` files are generated when running the `src/validate_ws.py` script - more on this later).
 
-### Accessing eos
+Once the rules have run without error, `ws_validation.done` gets deleted; best to keep the directory clean.
+
+```python
+rule post_mva_select:
+    # Implement the last selection layer preceding the MVAs and log effs
+    input:
+        samples = lambda wildcards: [ 
+            data_storage+"/{stream}/{filetype}/merged_magpols/{channel}/{year}/{mode}.root".\
+            format(stream=wildcards.stream, filetype=wildcards.filetype, channel=wildcards.channel, year=wildcards.year, mode=wildcards.mode)\
+        ] if wildcards.filetype=="MC"\
+        else [ 
+            data_storage+"/{stream}/{filetype}/charm_sw/{channel}/{year}/{mode}.root".\
+            format(stream=wildcards.stream, filetype=wildcards.filetype, channel=wildcards.channel, year=wildcards.year, mode=wildcards.mode)\
+        ], # MU + MD
+        dummy = "ws_validation.done" # force execution after WS validation stage
+    params:
+        post_mva_selection = lambda wildcards: config["selection"][wildcards.channel]["post_mva"],
+        tuple_dirs = lambda wildcards: config["directories"][wildcards.channel][wildcards.stream],
+        outbranches = lambda wildcards: config["branches"][wildcards.channel]["post_mva"] # further branch skimming: propagate vars used in MVAs and fit
+    output:
+        data_storage+"/{stream}/{filetype}/post_mva/{channel}/{year}/{mode}.root"
+    log: 
+        report = "reports/{stream}/{filetype}/post_mva/{channel}/{year}/{mode}.log",        
+        snake = "log/{stream}/{filetype}/post_mva/{channel}/{year}/{mode}.log"        
+    run:
+        if wildcards.filetype=="DATA":
+            # account for multiple data directories
+            dir_string = ""
+            for key in params.tuple_dirs:
+                dir_string+=f" --tupledir {key}" 
+            shell("python ./src/evt_select.py --selection {params.post_mva_selection} --input {input.samples} --output {output} --outbranches {params.outbranches} {dir_string} --log {log.report} &> {log.snake}") # the data branches need pruning; MC already pruned in relabelling
+        
+        if wildcards.filetype=="MC":
+            shell("python ./src/evt_select.py --selection {params.post_mva_selection} --input {input.samples} --output {output} --outbranches {params.outbranches} --log {log.report} &> {log.snake}")
+
+
+rule validate_ws:
+    # rule to generate ad-hoc study to validate the WS sample as a suitable proxy for the combinatorial background
+    input:
+        dpmunu = expand(
+            data_storage+"/{stream}/{filetype}/charm_sw/{channel}/{year}/{mode}.root",
+            stream="nominal", filetype="DATA", channel="DpMuNu", year=years, mode="Bc2DpMuNuX"
+        ),
+        dzmunu = expand(
+            data_storage+"/{stream}/{filetype}/charm_sw/{channel}/{year}/{mode}.root",
+            stream="nominal", filetype="DATA", channel="D0MuNu", year=years, mode="Bc2D0MuNuX"
+        ),
+        dummy = "feats_viz.done" # force execution after feats_viz stage
+    output:
+        temp("ws_validation.done")
+    run:
+        shell("python src/validate_ws.py --dcs {input.dzmunu} --ws {input.dpmunu} && touch {output}")
+```
+
+I should note that Snakemake has dedicated syntax to [enforce the rule execution](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#handling-ambiguous-rules). I am generally not a fan. Ambiguity in the DAQ can lead to bugs, and an un-deleted `temp()` file can signal something gone wrong in the worflow.
+
+#### Protected output files
+
+Proctected files, specified by 
+
+```python
+rule somerule:
+...
+output:
+    protected("a/protected/{output}/file.root")
+```
+are, in essence, the opposite of temporary output files. These are marked as read-only by the workflow manager upon successful completion of the rule that generates them. In this way, accidental modification or deletion of these files in subsequent steps or processes is prevented, ensuring the integrity of the results produced by the workflow.
+
+_In practice_, I store all files related to neural network optimisation and training in this way, owing to the time and compute costs associated with generating them.
+
+### Emails 
 
 ## Advanced 
 
 ### Checkpoints
 
-### Emails 
+### Accessing eos
 
-### Plotting 
+
+## Topics not covered but likely of interest
+
+Let me just flag that there are a tonne of useful functionalities that I am yet to experiment with in my research. For instance:
+
+- [Multi-extension outout expand](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html)
+- [Specifying per-rule threads](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html)
+- [Specifying per-rule memory allocation](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#resources)
+- [Rule messages](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#messages)
+- [Rule scheduling priority](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#priorities)
+- [Jupyter notebook integration](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#jupyter-notebook-integration)
+- [Julia integration](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#julia)
+- [Distribution and reproducibility with Conda envs](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#distribution-and-reproducibility) 
