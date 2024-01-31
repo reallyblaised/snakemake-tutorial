@@ -214,12 +214,12 @@ if __name__ == "__main__":
 ```
 This is a nice way to interface Python executables with the wildcard syntax native to Snakemake.
 
-### Running the pipelnie
+### Running the pipelihe
 
-Let's run. Type the command below, **in the same directory of `Snakefile`. 
+Let's run. Type the command, **in the same directory  as `Snakefile`**,
 
 ```
-$ snakemake --cores <number of cores; if none specified, use all available by default> 
+$ snakemake --cores <number of cores> 
 ```
 
 The main command is `snakeamke`. The flag `--cores` is required, and asks you to specify the number of cores you want to allocate to the jobs. I am not 100% sure of what happens under the hood. I know, however, that the flags `--cores` and `--cores all` are equivalent, and allow you to make use of all the available cores in your machine. You can refer to the [Snakemake docs](https://snakemake.readthedocs.io/en/stable/executing/cli.html#) for more details on resource allocation for more info.
@@ -228,16 +228,19 @@ All going well, you should see a lot of green from the jobs completing.
 
 ### Visualising the pipeline
 
-Upon successful completion of the pipeline, we can inspect the anatomy of the pipeline. That is, the overall DAG - showing the evolution of each input file - and the rule sequence, in order of execution. Notice how we introduced non-linearities in the workflow. Data-monte carlo comparisons, neural network training and evaluation, and similar other steps will force us to define complicated workflows.
+Upon successful completion of the pipeline, we can inspect the anatomy of the pipeline. That is, the overall DAG - showing the evolution of each input file - and the rule sequence, in order of execution.
+
 
 ```bash
-$ snakemake --rulegraph | dot -Tpdf > rulegraph.pdf
+# if you don't have dot installed: mamba install conda-forge::python-graphviz 
+$ snakemake --dag | dot -Tpng > dag.png
 ```
 should generate this plot:
 
-
+![DAG](assets/dag.png)
 
 ```bash
+# if you don't have dot installed: mamba install conda-forge::python-graphviz 
 $ snakemake --dag | dot -Tpdf > dag.pdf
 ```
 
