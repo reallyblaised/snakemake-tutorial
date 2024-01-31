@@ -603,16 +603,16 @@ which generates the following DAG plot:
 
 ![A more complex DAG. Nonlinearities are introduced in the workflow, as in a real LHC measurement.](assets/dag_complex.png)
 
+## Miscellaneous topics
+
+### Interfacing the Snakemake pipeline with the SubMIT cluster 
+
+The easiest way to work with SubMIT is via Slurm: 
 
 
 
-## Interfacing the Snakemake pipeline with the SubMIT cluster 
+### Dry runs & debugging
 
-## Useful commands 
-
-### Dry runs, forced runs 
-
-### Debugging
 
 ### Logging 
 
