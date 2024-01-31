@@ -244,7 +244,7 @@ $ snakemake --dag | dot -Tpng > dag.png
 ```
 should generate this plot, which spells out the wildcard allocation, and the corresponding _specific_ jobs executed by Snakemake:
 
-![A simple DAG.](assets/dag.png)
+![A simple DAG.](assets/dag_simple.png)
 
 The evolution of each file through the jobs flow matches the analysis design: `selection -> post-processing -> collection -> all`.
 
