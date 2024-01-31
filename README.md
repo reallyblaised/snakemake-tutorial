@@ -5,6 +5,7 @@ Disclaimer: no LHCb data has been used to generate this tutorial.
 
 Get in touch: `blaised at mit.edu`.
 
+![logo](assets/logo.png)
 
 ## Setup
 
@@ -396,7 +397,7 @@ This is just to give you a feeling of the level of complexity and flexibility af
 ```python
 """
 Prototycal workflow for the analysis on data split into many files located in the paths
-scratch/{data, mc}/{2011, 2012, 2016, 2017, 2018}/beauty2darkmatter_{i}.root
+scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
 """
 
 __author__ = "Blaise Delaney"
@@ -610,15 +611,114 @@ which generates the following DAG plot:
 The easiest way to work with SubMIT is via Slurm: 
 
 
-
 ### Dry runs & debugging
 
+A few command-line arguments come in handy to diagnose the `Snakefile` and the DAG that would ensue:
+
+- Dry runs: build the DAG _without executing any rule or job_,
+```bash
+$ snakemake --cores <number of cores> --dryrun
+```
+- Debugging: maximise the info printe dto screeen during the Snakemake execution,
+```bash
+$ snakemake --cores <number of cores> --debug
+```
+- Printing the actual commands run by each rule:
+```bash
+$ snakemake --cores <number of cores> --printshellcmds
+```
+- Related to this topic is the idea of forcing the pipeline to run until any job that can run successfully is complete, irrespective of the failre of a subset of failing jobs. That is to say, the command
+```bash
+$ snakemake --cores <number of cores> --keep-going
+```
+overwrites the Snakemake directive to shut down the entire DAG execution at the occurrence of a job failure.
+
+As mentioned earlier, the `Snakefile` supports user-defined and native Python functions. Hence, you should be able to use `breakpoint()` to step into the code. 
+
+Finally, you may find this snippet useful when debugging rules using the `lambda wildcards: ...` syntax. Take for example the rule `merge_years` in the [quasi-realtistic Snakefile](#a-quasi-relatistic-example) shown above. Once can call the `print()` in the `input` field with with a logical `or` to inspect the values attained by the wildcards and engage the I/O string pattern matching.
+
+```Python
+rule merge_years:
+    input:
+        lambda wildcards: [
+            print("Filetype:", wildcards.filetype, "Year:", year) or
+            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root".format(
+                filetype=wildcards.filetype, year=year
+            )
+            for year in years
+        ] if wildcards.filetype == "data" else [
+            print("Filetype:", wildcards.filetype, "Year:", year) or
+            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root".format(
+                filetype=wildcards.filetype, year=year
+            )
+            for year in years
+        ]
+    output:
+        "scratch/{filetype}/aggregated_pre_nn/beauty2darkmatter.root"
+    run:
+        print("Reading in {input} and merging into {output}".format(input=input, output=output))
+        shell("python src/process.py --input {input} --output {output}")
+```
 
 ### Logging 
 
+Snakemake [supports logging](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#log-files). Logs are effectively generated upon attempting to run a job, and persist in the file system even if the job execution failed. Indeed, logging is probably the best practice to understand the cause of a crash or execution failure. 
+
+Logging can be implemented as shown in this example used in an LHCb analysis:
+
+```python
+rule aggregate_years_data:
+    # merge the data files to generate 9 invfb of data
+    input: 
+        lambda wildcards: [ 
+            data_storage+"/{stream}/{filetype}/post_mva/{channel}/{year}/{mode}.root".\
+            format(stream=wildcards.stream, filetype="DATA", channel=wildcards.channel, year=year, mode=wildcards.mode)\
+            for year in years
+        ] 
+    output:
+        data_storage+"/{stream}/{filetype}/data_9invfb/{channel}/{mode}.root",
+    log: 
+        "log/{stream}/{filetype}/data_9invfb/{channel}/{mode}.log"        
+    run:
+        hadd_cmd = "hadd -fk {output} {input} &> {log}"
+        shell(hadd_cmd) 
+```
+
+The key point is that Snakemake provides in each rule a dedicated field, `log`, to which we can pipe any bash command (standard output and error) via `&> {log}`, using the native Snakemake syntax. 
+
+_Note_: the log path must the same wildcards as the input and output paths. In fact, this requirement applies to all the additional rule directives described in this section.
+
 ### Benchmarking 
 
+Benchmark files can be used to appraise the resource consumption of any give job. Similarly, Snakemake has a dedicated directive for this purpose. To this end, we can modify the [snippet above](#logging) as follows:
+
+```python
+rule aggregate_years_data:
+    # merge the data files to generate 9 invfb of data
+    input: 
+        lambda wildcards: [ 
+            data_storage+"/{stream}/{filetype}/post_mva/{channel}/{year}/{mode}.root".\
+            format(stream=wildcards.stream, filetype="DATA", channel=wildcards.channel, year=year, mode=wildcards.mode)\
+            for year in years
+        ] 
+    output:
+        data_storage+"/{stream}/{filetype}/data_9invfb/{channel}/{mode}.root",
+    log: 
+        "log/{stream}/{filetype}/data_9invfb/{channel}/{mode}.log"
+    benchmark:
+        "benchmarks/{stream}/{filetype}/data_9invfb/{channel}/{mode}.txt"
+    run:
+        hadd_cmd = "hadd -fk {output} {input} &> {log}"
+        shell(hadd_cmd)
+```
+
+The benchmark directive is added, specifying a path to save the benchmark file. This file will contain details like runtime, memory usage, and other system resources used during the execution of this rule. The benchmark file will be generated each time this rule is run, allowing us to track and compare the performance of this rule under different conditions or with different datasets.
+
+### Additional rule paremeters
+
 ### Clean up after yourself
+
+
 
 Notice the snippet at the beginning of the `Snakefile`: 
 
