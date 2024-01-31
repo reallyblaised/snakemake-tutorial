@@ -768,9 +768,9 @@ One has the option to enforce two special output-file status conditions:
 1. **Temporary files**: will be automatically deleted once the generating rule, and the subsequent rule inheriting this output, have been executed successfully. 
 ```python
 rule somerule:
-...
-output: 
-    temp("a/processed/{data}/file.root")
+    ...
+    output: 
+        temp("a/processed/{data}/file.root")
 ```
 Pragramatically, I find this quite useful to enforce an otherwise-ambiguous rule execution order, as illustrated by the example below. Please ignore the specifics of the rules. The key point is that rule `validate_ws` performs a set of sanity checks. If these are executed without error, a dummy temporary file, `temp("ws_validation.done")` is touched to signal the end of `rule validate_ws`. 
 The dummy file is then strictly required as input to the rule `post_mva_select`. This practice ensures the correct execution of `validate_ws` before `post_mva_select`. Without the dummy file, the former could be neglected by the DAG in the limit where `validate_ws` does not generate bespoke `.root` or `.pdf` files (we could spell out the paths of these in the output, but *a priori* we may not know how many `.pdf` files are generated when running the `src/validate_ws.py` script - more on this later).
@@ -831,15 +831,15 @@ rule validate_ws:
 
 I should note that Snakemake has dedicated syntax to [enforce the rule execution](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#handling-ambiguous-rules). I am generally not a fan. Ambiguity in the DAQ can lead to bugs, and an un-deleted `temp()` file can signal something gone wrong in the worflow.
 
-#### Protected output files
+### Protected output files
 
 Proctected files, specified by 
 
 ```python
 rule somerule:
-...
-output:
-    protected("a/protected/{output}/file.root")
+    ...
+    output:
+        protected("a/protected/{output}/file.root")
 ```
 are, in essence, the opposite of temporary output files. These are marked as read-only by the workflow manager upon successful completion of the rule that generates them. In this way, accidental modification or deletion of these files in subsequent steps or processes is prevented, ensuring the integrity of the results produced by the workflow.
 
