@@ -847,14 +847,25 @@ _In practice_, I store all files related to neural network optimisation and trai
 
 ### Emails 
 
+One can get Snakemake to send emails or Slack messages with varying levels of detail. I don't have much experience with this. However, the general prescription is as follows:
+
+```bash
+$ snakemake --log-handler-script path/to/your/log_handler_script.py
+```
+where the argument path is a custom handle Python script that interfaces with _e.g._ `smtplib` for sending emails and the `slackclient` package for sending Slack messages.
+
+In the past, I just wrote a specific rule for this task, or amended the `onsuccess` directive. However, I didn't find this practice all that useful in the end, and perhaps a bit too prone to generating noise in my inbox.
+
 ## Advanced 
+
+In this mini section, I wanted to showcase my way of resolving a couple of tricky scenarios.
 
 ### Checkpoints
 
 ### Accessing eos
 
 
-## Topics not covered but likely of interest
+## Topics not covered here but likely of interest
 
 Let me just flag that there are a tonne of useful functionalities that I am yet to experiment with in my research. For instance:
 
