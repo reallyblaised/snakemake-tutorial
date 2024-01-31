@@ -3,6 +3,9 @@ Snakemake tutorial delivered at the _Workshop on Basic Computing Services in the
 
 Disclaimer: no LHCb data has been used to generate this tutorial. 
 
+Get in touch: `blaised at mit.edu`.
+
+
 ## Setup
 
 Assuming you have a [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) installation in your user area:
@@ -135,7 +138,9 @@ rule all: # NOTE: the `all` rule is a special directive that is executed by defa
     input:
         expand("scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root", filetype=["data", "mc"], year=years, i=range(3))
 
+
 rule select:
+    """First step of the analysis: select events"""
     input:
         "scratch/{filetype}/{year}/beauty2darkmatter_{i}.root"
     output:
@@ -143,7 +148,9 @@ rule select:
     shell:
         "python src/process.py --input {input} --output {output}"
 
+
 rule post_process:
+    """Second step of the analysis: post-process selected events"""
     input:
         "scratch/{filetype}/{year}/selected/beauty2darkmatter_{i}.root"
     output:
@@ -235,16 +242,369 @@ Upon successful completion of the pipeline, we can inspect the anatomy of the pi
 # if you don't have dot installed: mamba install conda-forge::python-graphviz 
 $ snakemake --dag | dot -Tpng > dag.png
 ```
-should generate this plot:
+should generate this plot, which spells out the wildcard allocation, and the corresponding _specific_ jobs executed by Snakemake:
 
-![DAG](assets/dag.png)
+![A simple DAG.](assets/dag.png)
+
+The evolution of each file through the jobs flow matches the analysis design: `selection -> post-processing -> collection -> all`.
+
+That's the core idea of Snakemake. If you were just curious about what the fuss is all about, feel free to stop reading here. 
+
+In the following sections, we'll move closer to what might a "realistic" pipeline look like, in two incrementally complex cases. 
+
+### Re-running the pipeline
+
+Once all target files have been generated, Snakemake prevents you from re-running out-of-the-box:
 
 ```bash
-# if you don't have dot installed: mamba install conda-forge::python-graphviz 
-$ snakemake --dag | dot -Tpdf > dag.pdf
+$ snakemake --cores all
+Building DAG of jobs...
+Nothing to be done (all requested files are present and up to date).
+```
+This is due to the fact that the target files already exist. However, the **entire** pipeline execution can be forced via
+
+```bash
+$ snakemake --cores all --forceall
 ```
 
-Inspect the `dag.pdf` and `rulegraph.pdf` visualisations. Following the evolution of each file through the rules, can you convince yourself the job flow matches the analysis design? 
+In a similar vein, the commands
+
+```bash
+$ snakemake --cores --forcerun <rule_name>
+``` 
+and
+
+```bash
+$ snakemake --cores --until <rule_name> [--forceall]
+```
+allow you to run the pipeline from and until a specific rule in the DAG. 
+
+
+## A slightly more complex pipeline
+
+
+Let's add another layer of difficulty. What if I wanted to preprocess, say, only the simulations? This is quite common in LHCb analyses, and otherwise known as "truth-matching" (the details of this task are not important). 
+
+We can prepend a dedicated rule as follows: 
+
+```python
+rule truthmatch_simulation:
+    """Simulaion-specific preprocessing step before enacting any selection"""
+    input:
+        lambda wildcards: ["scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)]\
+            if wildcards.filetype == "mc" else []
+    output:
+        "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+```
+
+In the `truthmatch_simulation` rule, we introduce a conditional input using a `lambda` function, a powerful feature native to Python. This function dynamically determines the input files based on the wildcards used in the rule, specifically the `filetype` wildcard. The lambda function checks if the `filetype` is `"mc"`. If it is, the function returns the path to the simulation files; else, an empty list. This approach is particularly useful for applying certain processing steps conditionally, based on the nature of the input files, as specified by the input paths.
+
+The output of this rule specifies that the processed files will be stored in a `truthmatched_mc` directory under the respective `year` and `filetype` directories. This ensures that the processed simulation files are kept separate from other files, following a clear and organized directory structure.
+
+By structuring the rule this way, we effectively create a selective preprocessing step in the workflow that is only applied to Monte Carlo (MC) simulation files, demonstrating the flexibility and power of Snakemake in handling complex data processing pipelines.
+
+We can thereafter apply the same logic to the conditional input of the `select` rule, which inherits the raw `data` files, and the truth-matched `mc` counterparts:
+
+```python
+rule select:
+    """First *common* step of the analysis: select events"""
+    input:
+        lambda wildcards: "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root"\
+            .format(**wildcards) if wildcards.filetype == "mc"\
+            else "scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)
+    output:
+        "scratch/{filetype}/{year}/selected/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+```
+Notice how the after executing this rule, `data` and `mc` files are brought again on the same footing.
+
+The full `Snakefile` reads
+
+```python
+"""
+Prototycal workflow for the analysis on data split into many files located in the paths
+scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
+"""
+
+# global-scope config
+configfile: "config/main.yml" # NOTE: colon synax 
+# global-scope variables, fetched from the config file in config/main.yml
+years = config["years"] 
+
+
+rule all: # NOTE: the `all` rule is a special directive that is executed by default when the workflow is invoked
+    """
+    Target of the worflow; this sets up the direct acyclic graph (DAG) of the workflow
+    """
+    input:
+        expand("scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root", filetype=["data", "mc"], year=years, i=range(3))
+
+
+rule truthmatch_simulation:
+    """Simulaion-specific preprocessing step before enacting any selection"""
+    input:
+        lambda wildcards: ["scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)]\
+            if wildcards.filetype == "mc" else []
+    output:
+        "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+
+
+rule select:
+    """First *common* step of the analysis: select events"""
+    input:
+        lambda wildcards: "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root"\
+            .format(**wildcards) if wildcards.filetype == "mc"\
+            else "scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)
+    output:
+        "scratch/{filetype}/{year}/selected/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+
+
+rule post_process:
+    """Second step of the analysis: post-process selected events"""
+    input:
+        "scratch/{filetype}/{year}/selected/beauty2darkmatter_{i}.root"
+    output:
+        "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+```
+
+Upon running the visualisation utility
+
+```bash
+snakemake --dag | dot -Tpng > dag_truthmatch.png
+```
+we can convince ourselves that the conditional execution of the truth-matching is implemented correctly (in addition to examining the Snakemake output):
+
+![A slightly more complex DAG demonstraing conditional rule execution.](assets/dag_truthmatch.png)
+
+## A quasi-relatistic example
+
+In this case, I won't delve into any real detail. Suffice to note that the DAG plot below showcases a fair amount of non-linearity (with just a few input files!). The apparent complexity likely translates to efficient data processing, assuming sufficient compute (CPU cores and GPUs - more on that later), owing to the fact that we can run jobs in parallel. 
+
+*Note*: Snakemake will only run a rule when **all** the output files from the previous rule have been generated without errors.
+
+This is just to give you a feeling of the level of complexity and flexibility afforded by Snakefile. You may perhaps use this Snakefile as a reference for thornier cases in your analysis:
+
+```python
+"""
+Prototycal workflow for the analysis on data split into many files located in the paths
+scratch/{data, mc}/{2011, 2012, 2016, 2017, 2018}/beauty2darkmatter_{i}.root
+"""
+
+__author__ = "Blaise Delaney"
+__email__ = "blaise.delaney at cern.ch"
+
+# place necessary python imports here 
+import shutil
+
+# global-scope config
+configfile: "config/main.yml" # NOTE: colon synax 
+# global-scope variables, fetched from the config file in config/main.yml
+years = config["years"] 
+
+
+# end of execution: communicate the success or failure of the workflow and clean up the workspace
+onsuccess:
+    """
+    This is a special directive that is executed when the workflow completes successfully
+    """
+    print("=== Workflow completed successfully. Congrats! Hopefully you got some interesting results. ===")
+    # good practice: clean up the workspace metadata
+    shutil.rmtree(".snakemake/metadata")
+onerror:
+    """
+    This is a special directive that is executed when the workflow fails
+    """
+    print("=== ATTENTION! Workflow failed. Please refer to logging and debugging sections of the tutorial. ===")
+
+
+rule all: # NOTE: the `all` rule is a special directive that is executed by default when the workflow is invoked
+    """
+    Target of the worflow; this sets up the direct acyclic graph (DAG) of the workflow
+    """
+    input:
+        "results/fit_results.yml"
+
+rule truthmatch_simulation:
+    """Simulaion-specific preprocessing step before enacting any selection"""
+    input:
+        lambda wildcards: ["scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)]\
+            if wildcards.filetype == "mc" else []
+    output:
+        "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+
+rule preselect:
+    input:
+        lambda wildcards: "scratch/{filetype}/{year}/truthmatched_mc/beauty2darkmatter_{i}.root".format(**wildcards) if wildcards.filetype == "mc"\
+            else "scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)
+    output:
+        "scratch/{filetype}/{year}/preselected/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+
+rule select:
+    input:
+        "scratch/{filetype}/{year}/preselected/beauty2darkmatter_{i}.root"
+    output:
+        "scratch/{filetype}/{year}/full_sel/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+
+rule post_process:
+    input:
+        "scratch/{filetype}/{year}/full_sel/beauty2darkmatter_{i}.root"
+    output:
+        "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root"
+    shell:
+        "python src/process.py --input {input} --output {output}"
+
+rule merge_files_per_year:
+    """
+    Merge the per-year samples to accrue the full integrated luminosity collected by our favourite experiment
+    NOTE: obviously, aggregation occurs on the data and mc samples separately
+    """
+    input:
+        # decouple the aggregation of data and mc samples
+        lambda wildcards: [
+            "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root".\
+            format(filetype=wildcards.filetype, year=wildcards.year, i=i)\
+            for i in range(3) 
+        ] if wildcards.filetype == "mc"\
+        else [
+            "scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root".\
+            format(filetype=wildcards.filetype, year=wildcards.year, i=i)\
+            for i in range(3) 
+        ]
+    output:
+        "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root"
+    run:    
+        print("Merging {input} into {output}".format(input=input, output=output))
+        shell("python src/process.py --input {input} --output {output}")
+
+rule merge_years:
+    # aggregate the per-year samples into a single sample for the full integrated luminosity in data,
+    # and the corresponding simulation sample set 
+    input:
+        lambda wildcards: [
+            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root".\
+            format(filetype=wildcards.filetype, year=year)\
+            for year in years
+        ] if wildcards.filetype == "data" else [
+            "scratch/{filetype}/{year}/subjob_merged/beauty2darkmatter.root".\
+            format(filetype=wildcards.filetype, year=year)\
+            for year in years
+        ]
+    output:
+        "scratch/{filetype}/aggregated_pre_nn/beauty2darkmatter.root"
+    run:
+        print("Reading in {input} and merging into {output}".format(input=input, output=output))
+        shell("python src/process.py --input {input} --output {output}")
+
+rule train_neural_network:
+    """
+    Train the neural network on the aggregated data and simulation samples
+    """
+    input:
+        # decouple the data and mc. Realistically one would have to provide both classes to a python NN training/inference executable
+        data = "scratch/data/aggregated_pre_nn/beauty2darkmatter.root",
+        mc = "scratch/mc/aggregated_pre_nn/beauty2darkmatter.root"
+    output:
+        "nn/tuned_neural_network.yml" # NOTE: dynamically generated output and directory
+    run:
+        # NOTE how the two inputs are individually provided as arguments to the python script
+        print("Training the neural network on {input.data} and {input.mc}".format(input=input, output=output))
+        shell("python src/process.py --input {input.data} {input.mc} --output {output}") # in the script, argparse has nargs=+ for the input to accept multiple inputs
+
+rule nn_inference: 
+    """
+    Run the inference on the aggregated data and simulation samples
+    """
+    input:
+        # fetch the tuned neural network from the previous rule
+        nn = "nn/tuned_neural_network.yml",
+        # samples on which we want to run the inference
+        samples = "scratch/{filetype}/subjob_merged/beauty2darkmatter.root"
+    output:
+        "scratch/{filetype}/post_nn/beauty2darkmatter.root"
+    run:
+        print("Running the inference on {input}".format(input=input))
+        shell("python src/process.py --input {input.samples} {input.nn} --output {output}")
+
+rule sweight_data:
+    # typically, one can expect some data-driven density estimation or data-mc correction task performed per-year
+    # assume a sFit stage: https://inspirehep.net/literature/644725
+    input:
+        # decouple the input into the data and mc classes; 
+        # assume an analysis executable would use the sig to fix fit parameters in the sFit to data
+        data = lambda wildcards: [
+            "scratch/{filetype}/{year}/post_nn/beauty2darkmatter.root".\
+            format(filetype="data", year=wildcards.year)\
+        ], 
+        mc = lambda wildcards: [
+            "scratch/{filetype}/{year}/post_nn/beauty2darkmatter.root".\
+            format(filetype="mc", year=wildcards.year)\
+        ],
+    output:
+        "scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root",
+    run:
+        print("Sweighting {input.data} to with input from simulations: {input.mc}".format(input=input, output=output))
+        shell("python src/process.py --input {input.data} {input.mc} --output {output}")
+
+rule merge_years_pre_fit:
+    # aggregate the per-year samples into a single sample for the full integrated luminosity in data,
+    # and the corresponding simulation sample set 
+    input:
+        data = expand("scratch/{filetype}/{year}/sweighted/beauty2darkmatter.root", filetype="data", year=years),
+        mc = expand("scratch/{filetype}/{year}/post_nn/beauty2darkmatter.root", filetype="mc", year=years),
+    output:
+        data = "scratch/data/full_lumi/beauty2darkmatter.root",
+        mc = "scratch/mc/full_lumi/beauty2darkmatter.root"
+    run:
+        # decouple the aggregation of data and mc samples in python & bash. Not the most elegant solution, but it 
+        # showcases the flexibility of the in-scope python operations
+        print("Merging separately sweighted data and simulation samples into the appropriate output file")
+        
+        # data
+        print("Start with data: merge {input_data} into {output_data}".format(input_data=input.data, output_data=output.data))
+        shell("touch {output.data}") # you can think of this as placeholder for hadd -fk {output.data} {input.data}
+
+        # simulation
+        print("Now with simulation: merge {input_mc} into {output_mc}".format(input_mc=input.mc, output_mc=output.mc))
+        shell("touch {output.mc}")
+
+rule fit:
+    """
+    Run the fit on the aggregated data and simulation samples
+    """
+    input:
+        data = "scratch/data/full_lumi/beauty2darkmatter.root",
+        mc = "scratch/mc/full_lumi/beauty2darkmatter.root"
+    output:
+        "results/fit_results.yml" # NOTE: dynamically generated output and directory
+    run:
+        print("Running the fit on {input.data} and {input.mc}".format(input=input, output=output))
+        
+        # placecholder for, say, `python src/fit.py --input {input.data} {input.mc}`, where
+        # the output file gets generated automatically and picked up by snakemake (it'll ley you know it doesn't find it!) 
+        shell("python src/process.py --input {input} --output {output}") 
+```
+
+which generates the following DAG plot:
+
+![A more complex DAG. Nonlinearities are introduced in the workflow, as in a real LHC measurement.](assets/dag_complex.png)
+
+
+
 
 ## Interfacing the Snakemake pipeline with the SubMIT cluster 
 
