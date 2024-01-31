@@ -750,7 +750,6 @@ I don't have experience (yet) with interfacing Snakemake with HTCondor on subMIT
 # Wrapper to submit a script to condor using a custom job script.
 #
 # __author__: Blaise Delaney
-# __email__: blaise.delaney at cern.ch
 
 # ===========================================================================
 # $ snakemake --cluster wrappers/condor_wrapper.py --jobs 10 target file
