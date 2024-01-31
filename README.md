@@ -1,11 +1,14 @@
-# snakemake-tutorial
+# Snakemake@SubMIT for scientific discovery at LHCb
+
+![logo](assets/logo.png)
+
 Snakemake tutorial delivered at the _Workshop on Basic Computing Services in the Physics Department - subMIT_ at MIT in January 2024. 
 
 Disclaimer: no LHCb data has been used to generate this tutorial. 
 
 Get in touch: `blaised at mit.edu`.
 
-![logo](assets/logo.png)
+
 
 ## Setup
 
