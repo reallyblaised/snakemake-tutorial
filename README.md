@@ -6,8 +6,6 @@ Snakemake tutorial delivered at the _Workshop on Basic Computing Services in the
 
 Disclaimer: no LHCb data has been used to generate this tutorial. 
 
-Get in touch: `blaised at mit.edu`.
-
 ## Table of Contents
 
 
@@ -439,7 +437,6 @@ scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
 """
 
 __author__ = "Blaise Delaney"
-__email__ = "blaise.delaney at cern.ch"
 
 # place necessary python imports here 
 import shutil
