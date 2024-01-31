@@ -15,7 +15,7 @@ Disclaimer: no LHCb data has been used to generate this tutorial.
     - [Global-scope config](#global-scope-config)
     - [Rule definition and workflow assembly](#rule-definition-and-workflow-assembly)
     - [Running the pipeline](#running-the-pipelihe)
-    - [Visualising the pipeline](#visualising-the-pipeline)
+    - [Visualizing the pipeline](#visualising-the-pipeline)
     - [Re-running the pipeline](#re-running-the-pipeline)
 - [A slightly more complex example](#a-slightly-more-complex-pipeline)
 - [A quasi-realistic example](#a-quasi-relatistic-example)
@@ -23,7 +23,7 @@ Disclaimer: no LHCb data has been used to generate this tutorial.
     - [Interfacing Snakemake with subMIT](#interfacing-the-snakemake-pipeline-with-the-submit-cluster)
         - [Rule-specific subMIT partitions](#rule-specific-submit-partitions)
         - [HTCondor](#htcondor)
-    - [Dryruns and debugging](#dry-runs--debugging)
+    - [Dry runs and debugging](#dry-runs--debugging)
     - [Logging](#logging)
     - [Benchmarking rule performance](#benchmarking)
     - [Additional rule paramters](#additional-rule-paremeters)
@@ -80,7 +80,7 @@ The power of Snakemake lies in processing several files via independent jobs. Th
 
 We'll develop a prototypical LHCb analysis workflow, using dummy empty `.root` files, which we'll simply `touch` at each analysis stage for simplicity. Realistically, in your amazing project, you will replace these simplistic I/O steps with bash commands and Python executables. 
 
-The key point is that Snakemake orchestrates the job dependency, *irrespectively of the exact command executed in each job*. The full pipeline is specified by the `Snakefile` file, where rules are declared. In this tutorial we enforce a one-to-one correspondence between the stages of this dummy analysis and the rules of the workflow. That is, each rule specifies a stage (selection, postprocessing, fitting, etc.) in the analsysis.
+The key point is that Snakemake orchestrates the job dependency, *irrespectively of the exact command executed in each job*. The full pipeline is specified by the `Snakefile` file, where rules are declared. In this tutorial we enforce a one-to-one correspondence between the stages of this dummy analysis and the rules of the workflow. That is, each rule specifies a stage (selection, postprocessing, fitting, etc.) in the analysis.
 
 The rule execution order is set by string pattern matching the respective per-rule `input` and `output` directives. You can read more about this design on the Snakemake [_Getting Started_](https://snakemake.github.io) page. In the interest of time, let's dive in; certain tools are best learnt by getting your hands dirty.
 
@@ -122,25 +122,25 @@ scratch
 ```
 This setup emulates the typical split between data and Monte Carlo simulations typically used in an LHC(b) analysis. ROOT is the _de facto_ default format to store HEP events. We consider two years of data taking, `2012` and `2018`, as representative of the Run 1 and Run 2 data taking campaigns of the LHC.
 
-**For LHC users**: if your files are store on `eos` and you need employ the `xrootd` protocol, see the section _Accessing eos_ below.
+**For LHC users**: if your files are store on `eos` and you need employ the `xrootd` protocol, see the section [Accessing eos](#accessing-eos) below.
 
 Now we have everything to get started.
 
 ### Global-scope config 
 
-Let's start at the beginnig: in our `Snakefile`, we start by importing global-scope parameters:
+Let's start at the beginning: in our `Snakefile`, we start by importing global-scope parameters:
 
 ```python
 
 # ./Snakefile
 
 # global-scope config
-configfile: "config/main.yml" # NOTE: colon synax 
+configfile: "config/main.yml" # NOTE: colon syntax 
 # global-scope variables, fetched from the config file in config/main.yml
 years = config["years"] 
 ```
 
-This imports the global parameters that condition the overall pipeline, as read in by `config/main.yml`. The path to the yaml config file is arbitrary; `configfile` is unmutable Snakemake syntax. By taking a look at `config/main.yml`,
+This imports the global parameters that condition the overall pipeline, as read in by `config/main.yml`. The path to the yaml config file is arbitrary; `configfile` is immutable Snakemake syntax. By taking a look at `config/main.yml`,
 you'll see that I have just specified a list of nominal years of data taking I wish to run on. I generally prefer specifying such global parameters in a dedicated config YAML file to keep things tidy and flexible (you may want to decouple data and MC runs, as well as the years you decide to run on). 
 
 Ultimately, all we do is read in the `years: ["2012", "2018"]` entry into the Python list 
@@ -158,19 +158,19 @@ Let's inspect the rest of the Snakefile:
 
 ```python
 """
-Prototycal workflow for the analysis on data split into many files located in the paths
+Prototypical workflow for the analysis on data split into many files located in the paths
 scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
 """
 
 # global-scope config
-configfile: "config/main.yml" # NOTE: colon synax 
+configfile: "config/main.yml" # NOTE: colon syntax 
 # global-scope variables, fetched from the config file in config/main.yml
 years = config["years"] 
 
 
 rule all: # NOTE: the `all` rule is a special directive that is executed by default when the workflow is invoked
     """
-    Target of the worflow; this sets up the direct acyclic graph (DAG) of the workflow
+    Target of the workflow; this sets up the direct acyclic graph (DAG) of the workflow
     """
     input:
         expand("scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root", filetype=["data", "mc"], year=years, i=range(3))
@@ -196,7 +196,7 @@ rule post_process:
         "python src/process.py --input {input} --output {output}"
 ```
 
-Rule `all` specifies the _target_ of the entire workflow. In this sense, Snakeamke is a _top-down_ pipelining tool: the workflow starts from the input specified in `rule all` and works its way down to the individual rules required to generate the files specifified in the `input` field in the scope of `rule all`. 
+Rule `all` specifies the _target_ of the entire workflow. In this sense, Snakemake is a _top-down_ pipelining tool: the workflow starts from the input specified in `rule all` and works its way down to the individual rules required to generate the files specified in the `input` field in the scope of `rule all`. 
 
 The rule dependency resolution in Snakemake is done string pattern matching the output paths of each rule with the input file paths of another, thereby constructing a directed acyclic graph (DAG) of tasks. This DAG is then traversed from the final outputs back to the initial inputs, following a top-down approach.
 
@@ -228,7 +228,7 @@ we avail ourselves of the `expand` special function in Snakemake to generate the
 
 The rest of the rules define the necessary rules necessary to generate the file paths above. Notice how we added a directory mid-path to specify the *stage* of the analysis, whilst effectively keeping the overall number and kind of dummy files generated at the beginning of this tutorial. We preserve the name of the individual files with each I/O operation, in each stage. The parent path is sufficient to map each file to the rule that generates it. 
 
-Each ancestor rule to `all` has (at the very least - more on this later) the `input`, `output` and `shell` fields. These should be self explanatory. The name of the game is matching the wildcards in each path to enfore the desired dependency. 
+Each ancestor rule to `all` has (at the very least - more on this later) the `input`, `output` and `shell` fields. These should be self explanatory. The name of the game is matching the wildcards in each path to enforce the desired dependency. 
 
 In `shell` we spell out a string specifying the bash command each job must execute: 
 
@@ -266,11 +266,11 @@ Let's run. Type the command, **in the same directory  as `Snakefile`**,
 $ snakemake --cores <number of cores> 
 ```
 
-The main command is `snakeamke`. The flag `--cores` is required, and asks you to specify the number of cores you want to allocate to the jobs. I am not 100% sure of what happens under the hood. I know, however, that the flags `--cores` and `--cores all` are equivalent, and allow you to make use of all the available cores in your machine. You can refer to the [Snakemake docs](https://snakemake.readthedocs.io/en/stable/executing/cli.html#) for more details on resource allocation for more info.
+The main command is `snakemake`. The flag `--cores` is required, and asks you to specify the number of cores you want to allocate to the jobs. I am not 100% sure of what happens under the hood. I know, however, that the flags `--cores` and `--cores all` are equivalent, and allow you to make use of all the available cores in your machine. You can refer to the [Snakemake docs](https://snakemake.readthedocs.io/en/stable/executing/cli.html#) for more details on resource allocation for more info.
 
 All going well, you should see a lot of green from the jobs completing.
 
-### Visualising the pipeline
+### Visualizing the pipeline
 
 Upon successful completion of the pipeline, we can inspect the anatomy of the pipeline. That is, the overall DAG - showing the evolution of each input file - and the rule sequence, in order of execution.
 
@@ -320,7 +320,7 @@ allow you to run the pipeline from and until a specific rule in the DAG, respect
 ## A slightly more complex pipeline
 
 
-Let's add another layer of difficulty. What if I wanted to preprocess, say, only the simulations? This is quite common in LHCb analyses, and otherwise known as "truth-matching" (the details of this task are not important). 
+Let's add another layer of difficulty. What if I wanted to pre-process, say, only the simulations? This is quite common in LHCb analyses, and otherwise known as "truth-matching" (the details of this task are not important). 
 
 We can prepend a dedicated rule as follows: 
 
@@ -367,14 +367,14 @@ scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
 """
 
 # global-scope config
-configfile: "config/main.yml" # NOTE: colon synax 
+configfile: "config/main.yml" # NOTE: colon syntax 
 # global-scope variables, fetched from the config file in config/main.yml
 years = config["years"] 
 
 
 rule all: # NOTE: the `all` rule is a special directive that is executed by default when the workflow is invoked
     """
-    Target of the worflow; this sets up the direct acyclic graph (DAG) of the workflow
+    Target of the workflow; this sets up the direct acyclic graph (DAG) of the workflow
     """
     input:
         expand("scratch/{filetype}/{year}/post_processed/beauty2darkmatter_{i}.root", filetype=["data", "mc"], year=years, i=range(3))
@@ -413,7 +413,7 @@ rule post_process:
         "python src/process.py --input {input} --output {output}"
 ```
 
-Upon running the visualisation utility
+Upon running the visualization utility
 
 ```bash
 snakemake --dag | dot -Tpng > dag_truthmatch.png
@@ -422,7 +422,7 @@ we can convince ourselves that the conditional execution of the truth-matching i
 
 ![A slightly more complex DAG demonstraing conditional rule execution.](assets/dag_truthmatch.png)
 
-## A quasi-relatistic example
+## A quasi-realistic example
 
 In this case, I won't delve into any real detail. Suffice to note that the DAG plot below showcases a fair amount of non-linearity (with just a few input files!). The apparent complexity likely translates to efficient data processing, assuming sufficient compute (CPU cores and GPUs - more on that later), owing to the fact that we can run jobs in parallel. 
 
@@ -432,7 +432,7 @@ This is just to give you a feeling of the level of complexity and flexibility af
 
 ```python
 """
-Prototycal workflow for the analysis on data split into many files located in the paths
+Prototypical workflow for the analysis on data split into many files located in the paths
 scratch/{data, mc}/{2012, 2018}/beauty2darkmatter_{i}.root
 """
 
@@ -442,7 +442,7 @@ __author__ = "Blaise Delaney"
 import shutil
 
 # global-scope config
-configfile: "config/main.yml" # NOTE: colon synax 
+configfile: "config/main.yml" # NOTE: colon syntax 
 # global-scope variables, fetched from the config file in config/main.yml
 years = config["years"] 
 
@@ -464,13 +464,13 @@ onerror:
 
 rule all: # NOTE: the `all` rule is a special directive that is executed by default when the workflow is invoked
     """
-    Target of the worflow; this sets up the direct acyclic graph (DAG) of the workflow
+    Target of the workflow; this sets up the direct acyclic graph (DAG) of the workflow
     """
     input:
         "results/fit_results.yml"
 
 rule truthmatch_simulation:
-    """Simulaion-specific preprocessing step before enacting any selection"""
+    """Simulation-specific preprocessing step before enacting any selection"""
     input:
         lambda wildcards: ["scratch/{filetype}/{year}/beauty2darkmatter_{i}.root".format(**wildcards)]\
             if wildcards.filetype == "mc" else []
@@ -630,7 +630,7 @@ rule fit:
     run:
         print("Running the fit on {input.data} and {input.mc}".format(input=input, output=output))
         
-        # placecholder for, say, `python src/fit.py --input {input.data} {input.mc}`, where
+        # placeholder for, say, `python src/fit.py --input {input.data} {input.mc}`, where
         # the output file gets generated automatically and picked up by snakemake (it'll ley you know it doesn't find it!) 
         shell("python src/process.py --input {input} --output {output}") 
 ```
@@ -699,7 +699,7 @@ default-resources:
   - time="48:00:00"
   - mem_mb=2000
 ```
-Defines default resource specifications for jobs. Unless specified otherwise, these are the values provided to the Slurm submission command (more on this later). These should be self-expanatory.
+Defines default resource specifications for jobs. Unless specified otherwise, these are the values provided to the Slurm submission command (more on this later). These should be self-explanatory.
 
 Additional options provide typical Snakemake directives. In addition to the arguments covered in this tutorial, the following Snakemake flags are used:
 
@@ -707,7 +707,7 @@ Additional options provide typical Snakemake directives. In addition to the argu
 - `max-status-checks-per-second: 1` limits the frequency of status checks to prevent overloading the Slurm scheduler;
 - `latency-wait: 3600` sets a waiting time (in seconds) to allow for file system delays. Useful in ensuring all files are written before the next rule starts;
 - `jobs: 5000` sets the maximum number of Slurm jobs that can be simultaneously submitted (start with a small number first!);
-- `rerun-incomplete: True` snsures that any incomplete jobs (perhaps due to system failures) are automatically rerun (*e.g.* in case you halted the workflow execution with `ctrl+c` or the ssh tunnelling dropped);
+- `rerun-incomplete: True` ensures that any incomplete jobs (perhaps due to system failures) are automatically rerun (*e.g.* in case you halted the workflow execution with `ctrl+c` or the ssh tunnelling dropped);
 - `use-conda: True` allows Snakemake to manage environments using Conda, which can be useful for handling dependencies.
 
 With `slurm_simple/config.yml` set appropriately, you can run the pipeline on the selected subMIT partition: 
