@@ -1194,6 +1194,43 @@ Again, beyond the specifics of the job, we avail ourselves of the fact that the 
 
 ### Accessing eos
 
+Assuming you have your samples stored on the CERN [eos](https://eos-web.web.cern.ch/eos-web/) remote storage space, you can make used of the `xrootd` protocol to set your rule input.
+
+Here is an example:
+
+```python
+from snakemake.remote.XRootD import RemoteProvider as XRootDRemoteProvider
+XRootD = XRootDRemoteProvider(stay_on_remote=True)
+
+rule relabel_simulation:
+    """
+    Amend branch labels where appropriate to bring data and mc in line
+    """
+    input:
+        XRootD.remote(remote_storage+"/{filetype}/{channel}/{year}/{magpol}/{prefix}_{mode}_{year}_{magpol}_pidgen.root")
+    output:
+        (expand(data_storage+"/{stream}/{{filetype}}/relabelled/{{channel}}/{{year}}/{{magpol}}/{{prefix}}_{{mode}}.root", stream=streams))
+    params:
+        branches = lambda wildcards: config["branches"][wildcards.channel]["intermediate"]
+    log: 
+        "log/{filetype}/relabelled/{channel}/{year}/{magpol}/{prefix}_{mode}.log"
+    run:
+        shell("python ./src/relabel_mc.py --input {input} --output {output} &> {log}")
+```
+Here the `input` entry relies on providing a suitable string which patches the full path of the files on eos. Passing this to `XRootD.remote()` allows you to [manipulate the wildcards and access the files stored remotely](https://snakemake.readthedocs.io/en/v7.24.1/snakefiles/remote_files.html). That's essentially it - subsequent rules need not have any change in their respective `input` directive.
+
+Note: you will need to initialise your kerberos token by typing
+
+```bash
+$ kinit <username>@<server.extension>
+```
+before running Snakemake. You can also export this certificate to have it last longer than 24hr, but that's besides the scope of this tutorial. 
+
+I suggest you also have a look at [wildcard constraints](https://snakemake.readthedocs.io/en/stable/tutorial/additional_features.html#constraining-wildcards) for more complex cases related to spanning remote file paths. I decided to omit a snippet here to avoid leaking too much private LHCb information. If you're an LHCb user, feel free to get in touch for more info.
+
+> *That's all, folks!* I have listed below a set of topics not covered here that might be of interest.
+> I hope it was useful. Thanks for reading.
+
 
 ## Topics not covered here but likely of interest
 
