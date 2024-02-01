@@ -715,6 +715,8 @@ With `slurm_simple/config.yml` set appropriately, you can run the pipeline on th
 $ snakemake --profile ./slurm_simple
 ```
 
+A far more comprehensive guide and set of examples can be found [here](https://github.com/jdblischak/smk-simple-slurm/tree/main).
+
 #### Rule-specific subMIT partitions
 
 It may be useful to change the subMIT partition for a subset of jobs. 
