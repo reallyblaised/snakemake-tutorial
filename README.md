@@ -14,7 +14,7 @@ Disclaimer: no LHCb data has been used to generate this tutorial.
 - [A basic pipeline](#a-basic-pipeline)
     - [Global-scope config](#global-scope-config)
     - [Rule definition and workflow assembly](#rule-definition-and-workflow-assembly)
-    - [Running the pipeline](#running-the-pipelihe)
+    - [Running the pipeline](#running-the-pipeline)
     - [Visualizing the pipeline](#visualising-the-pipeline)
     - [Re-running the pipeline](#re-running-the-pipeline)
 - [A slightly more complex example](#a-slightly-more-complex-pipeline)
@@ -258,7 +258,7 @@ if __name__ == "__main__":
 ```
 This is a nice way to interface Python executables with the wildcard syntax native to Snakemake.
 
-### Running the pipelihe
+### Running the pipeline
 
 Let's run. Type the command, **in the same directory  as `Snakefile`**,
 
