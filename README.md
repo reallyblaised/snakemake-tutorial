@@ -428,7 +428,8 @@ In this case, I won't delve into any real detail. Suffice to note that the DAG p
 
 *Note*: Snakemake will only run a rule when **all** the output files from the previous rule have been generated without errors.
 
-This is just to give you a feeling of the level of complexity and flexibility afforded by Snakefile. You may perhaps use this Snakefile as a reference for thornier cases in your analysis:
+This is just to give you a feeling of the level of complexity and flexibility afforded by Snakefile. You may perhaps use this `Snakefile` as a reference for thornier cases in your analysis (you can find this also on the branch `quasi-realistic` of this repo):
+
 
 ```python
 """
