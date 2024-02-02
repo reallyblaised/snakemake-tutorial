@@ -268,7 +268,290 @@ $ snakemake --cores <number of cores>
 
 The main command is `snakemake`. The flag `--cores` is required, and asks you to specify the number of cores you want to allocate to the jobs. I am not 100% sure of what happens under the hood. I know, however, that the flags `--cores` and `--cores all` are equivalent, and allow you to make use of all the available cores in your machine. You can refer to the [Snakemake docs](https://snakemake.readthedocs.io/en/stable/executing/cli.html#) for more details on resource allocation for more info.
 
-All going well, you should see a lot of green from the jobs completing.
+All going well, you should see a lot of green from the jobs completing. Specifically, something like this:
+
+```bash
+$ snakemake --cores 1
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job             count
+------------  -------
+all                 1
+post_process        6
+select              6
+total              13
+
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:03 2024]
+localrule select:
+    input: scratch/mc/2018/beauty2darkmatter_1.root
+    output: scratch/mc/2018/selected/beauty2darkmatter_1.root
+    jobid: 22
+    reason: Set of input files has changed since last execution
+    wildcards: filetype=mc, year=2018, i=1
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2018/beauty2darkmatter_1.root'], output=scratch/mc/2018/selected/beauty2darkmatter_1.root)
+[Fri Feb  2 10:46:03 2024]
+Finished job 22.
+1 of 13 steps (8%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:03 2024]
+localrule post_process:
+    input: scratch/mc/2018/selected/beauty2darkmatter_1.root
+    output: scratch/mc/2018/post_processed/beauty2darkmatter_1.root
+    jobid: 21
+    reason: Input files updated by another job: scratch/mc/2018/selected/beauty2darkmatter_1.root
+    wildcards: filetype=mc, year=2018, i=1
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2018/selected/beauty2darkmatter_1.root'], output=scratch/mc/2018/post_processed/beauty2darkmatter_1.root)
+[Fri Feb  2 10:46:03 2024]
+Finished job 21.
+2 of 13 steps (15%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:03 2024]
+localrule select:
+    input: scratch/mc/2018/beauty2darkmatter_2.root
+    output: scratch/mc/2018/selected/beauty2darkmatter_2.root
+    jobid: 24
+    reason: Set of input files has changed since last execution
+    wildcards: filetype=mc, year=2018, i=2
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2018/beauty2darkmatter_2.root'], output=scratch/mc/2018/selected/beauty2darkmatter_2.root)
+[Fri Feb  2 10:46:03 2024]
+Finished job 24.
+3 of 13 steps (23%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:03 2024]
+localrule post_process:
+    input: scratch/mc/2018/selected/beauty2darkmatter_2.root
+    output: scratch/mc/2018/post_processed/beauty2darkmatter_2.root
+    jobid: 23
+    reason: Input files updated by another job: scratch/mc/2018/selected/beauty2darkmatter_2.root
+    wildcards: filetype=mc, year=2018, i=2
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2018/selected/beauty2darkmatter_2.root'], output=scratch/mc/2018/post_processed/beauty2darkmatter_2.root)
+[Fri Feb  2 10:46:04 2024]
+Finished job 23.
+4 of 13 steps (31%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:04 2024]
+localrule select:
+    input: scratch/mc/2012/beauty2darkmatter_1.root
+    output: scratch/mc/2012/selected/beauty2darkmatter_1.root
+    jobid: 16
+    reason: Set of input files has changed since last execution
+    wildcards: filetype=mc, year=2012, i=1
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2012/beauty2darkmatter_1.root'], output=scratch/mc/2012/selected/beauty2darkmatter_1.root)
+[Fri Feb  2 10:46:04 2024]
+Finished job 16.
+5 of 13 steps (38%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:04 2024]
+localrule post_process:
+    input: scratch/mc/2012/selected/beauty2darkmatter_1.root
+    output: scratch/mc/2012/post_processed/beauty2darkmatter_1.root
+    jobid: 15
+    reason: Input files updated by another job: scratch/mc/2012/selected/beauty2darkmatter_1.root
+    wildcards: filetype=mc, year=2012, i=1
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2012/selected/beauty2darkmatter_1.root'], output=scratch/mc/2012/post_processed/beauty2darkmatter_1.root)
+[Fri Feb  2 10:46:04 2024]
+Finished job 15.
+6 of 13 steps (46%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:04 2024]
+localrule select:
+    input: scratch/mc/2012/beauty2darkmatter_2.root
+    output: scratch/mc/2012/selected/beauty2darkmatter_2.root
+    jobid: 18
+    reason: Set of input files has changed since last execution
+    wildcards: filetype=mc, year=2012, i=2
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2012/beauty2darkmatter_2.root'], output=scratch/mc/2012/selected/beauty2darkmatter_2.root)
+[Fri Feb  2 10:46:04 2024]
+Finished job 18.
+7 of 13 steps (54%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:04 2024]
+localrule select:
+    input: scratch/mc/2018/beauty2darkmatter_0.root
+    output: scratch/mc/2018/selected/beauty2darkmatter_0.root
+    jobid: 20
+    reason: Set of input files has changed since last execution
+    wildcards: filetype=mc, year=2018, i=0
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2018/beauty2darkmatter_0.root'], output=scratch/mc/2018/selected/beauty2darkmatter_0.root)
+[Fri Feb  2 10:46:04 2024]
+Finished job 20.
+8 of 13 steps (62%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:04 2024]
+localrule select:
+    input: scratch/mc/2012/beauty2darkmatter_0.root
+    output: scratch/mc/2012/selected/beauty2darkmatter_0.root
+    jobid: 14
+    reason: Set of input files has changed since last execution
+    wildcards: filetype=mc, year=2012, i=0
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2012/beauty2darkmatter_0.root'], output=scratch/mc/2012/selected/beauty2darkmatter_0.root)
+[Fri Feb  2 10:46:04 2024]
+Finished job 14.
+9 of 13 steps (69%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:05 2024]
+localrule post_process:
+    input: scratch/mc/2012/selected/beauty2darkmatter_2.root
+    output: scratch/mc/2012/post_processed/beauty2darkmatter_2.root
+    jobid: 17
+    reason: Input files updated by another job: scratch/mc/2012/selected/beauty2darkmatter_2.root
+    wildcards: filetype=mc, year=2012, i=2
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2012/selected/beauty2darkmatter_2.root'], output=scratch/mc/2012/post_processed/beauty2darkmatter_2.root)
+[Fri Feb  2 10:46:05 2024]
+Finished job 17.
+10 of 13 steps (77%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:05 2024]
+localrule post_process:
+    input: scratch/mc/2012/selected/beauty2darkmatter_0.root
+    output: scratch/mc/2012/post_processed/beauty2darkmatter_0.root
+    jobid: 13
+    reason: Input files updated by another job: scratch/mc/2012/selected/beauty2darkmatter_0.root
+    wildcards: filetype=mc, year=2012, i=0
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2012/selected/beauty2darkmatter_0.root'], output=scratch/mc/2012/post_processed/beauty2darkmatter_0.root)
+[Fri Feb  2 10:46:05 2024]
+Finished job 13.
+11 of 13 steps (85%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:05 2024]
+localrule post_process:
+    input: scratch/mc/2018/selected/beauty2darkmatter_0.root
+    output: scratch/mc/2018/post_processed/beauty2darkmatter_0.root
+    jobid: 19
+    reason: Input files updated by another job: scratch/mc/2018/selected/beauty2darkmatter_0.root
+    wildcards: filetype=mc, year=2018, i=0
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+Success! Operation completed successfully for AnalysisOperation(input=['scratch/mc/2018/selected/beauty2darkmatter_0.root'], output=scratch/mc/2018/post_processed/beauty2darkmatter_0.root)
+[Fri Feb  2 10:46:05 2024]
+Finished job 19.
+12 of 13 steps (92%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Fri Feb  2 10:46:05 2024]
+localrule all:
+    input: scratch/data/2012/post_processed/beauty2darkmatter_0.root, scratch/data/2012/post_processed/beauty2darkmatter_1.root, scratch/data/2012/post_processed/beauty2darkmatter_2.root, scratch/data/2018/post_processed/beauty2darkmatter_0.root, scratch/data/2018/post_processed/beauty2darkmatter_1.root, scratch/data/2018/post_processed/beauty2darkmatter_2.root, scratch/mc/2012/post_processed/beauty2darkmatter_0.root, scratch/mc/2012/post_processed/beauty2darkmatter_1.root, scratch/mc/2012/post_processed/beauty2darkmatter_2.root, scratch/mc/2018/post_processed/beauty2darkmatter_0.root, scratch/mc/2018/post_processed/beauty2darkmatter_1.root, scratch/mc/2018/post_processed/beauty2darkmatter_2.root
+    jobid: 0
+    reason: Input files updated by another job: scratch/mc/2018/post_processed/beauty2darkmatter_0.root, scratch/mc/2012/post_processed/beauty2darkmatter_2.root, scratch/mc/2012/post_processed/beauty2darkmatter_0.root, scratch/mc/2018/post_processed/beauty2darkmatter_1.root, scratch/mc/2012/post_processed/beauty2darkmatter_1.root, scratch/mc/2018/post_processed/beauty2darkmatter_2.root
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+[Fri Feb  2 10:46:05 2024]
+Finished job 0.
+13 of 13 steps (100%) done
+Complete log: .snakemake/log/2024-02-02T104601.611919.snakemake.log
+```
+
+You can see that the DAG is assembled first,
+
+```bash
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job             count
+------------  -------
+all                 1
+post_process        6
+select              6
+total              13
+
+Select jobs to execute...
+Execute 1 jobs...
+```
+with an overview of the resources allocated by the user. The line `` pertains to how Snakemake manages computational resources, specifically CPU threads, when executing rules.
+
+Snakemake rules can specify the number of threads they require using the threads directive. This is useful for parallelizing tasks within a rule to speed up the processing of data. However, the actual number of threads available for use might be limited by the system or by the user's specifications when launching a Snakemake workflow.
+
+The message indicates that if a rule requests more threads than are available or allocated for the workflow, Snakemake will automatically adjust (scale down) the number of threads for that rule to match the available resources. This ensures that the workflow does not attempt to use more resources than are available, which could lead to system overload or inefficient scheduling of tasks.
+
+In other words, the command-line argument `--cores 1` overrides the per-rule thread allocation specified by the user. So for a rule such as,
+
+```python
+rule select:
+    """First step of the analysis: select events"""
+    input:
+        "scratch/{filetype}/{year}/beauty2darkmatter_{i}.root"
+    output:
+        "scratch/{filetype}/{year}/selected/beauty2darkmatter_{i}.root"
+    threads: 
+        8
+    shell:
+        "python src/process.py --input {input} --output {output}"
+```
+Snakemake will adjust the execution of that rule to use 1 thread only, complying with the upper bound sent by the global directive `--cores 1`. This scaling down helps to maintain the *user-informed* overall efficiency and stability of the system by avoiding over-subscription of CPU resources.
+
+The remainder of the output above showcases the job execution flow. 
+
+Finally,
+
+```bash
+[Fri Feb  2 10:46:05 2024]
+localrule all:
+    input: scratch/data/2012/post_processed/beauty2darkmatter_0.root, scratch/data/2012/post_processed/beauty2darkmatter_1.root, scratch/data/2012/post_processed/beauty2darkmatter_2.root, scratch/data/2018/post_processed/beauty2darkmatter_0.root, scratch/data/2018/post_processed/beauty2darkmatter_1.root, scratch/data/2018/post_processed/beauty2darkmatter_2.root, scratch/mc/2012/post_processed/beauty2darkmatter_0.root, scratch/mc/2012/post_processed/beauty2darkmatter_1.root, scratch/mc/2012/post_processed/beauty2darkmatter_2.root, scratch/mc/2018/post_processed/beauty2darkmatter_0.root, scratch/mc/2018/post_processed/beauty2darkmatter_1.root, scratch/mc/2018/post_processed/beauty2darkmatter_2.root
+    jobid: 0
+    reason: Input files updated by another job: scratch/mc/2018/post_processed/beauty2darkmatter_0.root, scratch/mc/2012/post_processed/beauty2darkmatter_2.root, scratch/mc/2012/post_processed/beauty2darkmatter_0.root, scratch/mc/2018/post_processed/beauty2darkmatter_1.root, scratch/mc/2012/post_processed/beauty2darkmatter_1.root, scratch/mc/2018/post_processed/beauty2darkmatter_2.root
+    resources: tmpdir=/var/folders/qn/c90ys3b55gd5zk0wkgsxj0rw0000gn/T
+
+[Fri Feb  2 10:46:05 2024]
+Finished job 0.
+13 of 13 steps (100%) done
+Complete log: .snakemake/log/2024-02-02T104601.611919.snakemake.log
+```
+
+Spells out the target of the DAG (remember Snakemake follows a top-down workflow assembly), the last job, and a complete log is thereafter produced. See section [Clean Up After Yourself](#clean-up-after-yourself) to lean how to remove these automatically generated logs upon successful execution of the pipeline.
 
 ### Visualizing the pipeline
 
