@@ -1102,15 +1102,55 @@ with NamedTemporaryFile("w") as sub_file:
 
 A few command-line arguments come in handy to diagnose the `Snakefile` and the DAG that would ensue:
 
-- Dry runs: build the DAG _without executing any rule or job_,
+- Dry runs: build the DAG _without executing any rule or job_. Running
 ```bash
 $ snakemake --cores <number of cores> --dryrun
 ```
+will simply show you the assembed DAG, with all its rules:
+
+```bash
+Building DAG of jobs...
+Job stats:
+job             count
+------------  -------
+all                 1
+post_process       12
+select             12
+total              25
+
+Execute 12 jobs...
+
+...<rest of inferred jobs, omitted for brevity>
+
+[Fri Feb  2 11:00:45 2024]
+localrule all:
+    input: scratch/data/2012/post_processed/beauty2darkmatter_0.root, scratch/data/2012/post_processed/beauty2darkmatter_1.root, scratch/data/2012/post_processed/beauty2darkmatter_2.root, scratch/data/2018/post_processed/beauty2darkmatter_0.root, scratch/data/2018/post_processed/beauty2darkmatter_1.root, scratch/data/2018/post_processed/beauty2darkmatter_2.root, scratch/mc/2012/post_processed/beauty2darkmatter_0.root, scratch/mc/2012/post_processed/beauty2darkmatter_1.root, scratch/mc/2012/post_processed/beauty2darkmatter_2.root, scratch/mc/2018/post_processed/beauty2darkmatter_0.root, scratch/mc/2018/post_processed/beauty2darkmatter_1.root, scratch/mc/2018/post_processed/beauty2darkmatter_2.root
+    jobid: 0
+    reason: Forced execution
+    resources: tmpdir=<TBD>
+
+Job stats:
+job             count
+------------  -------
+all                 1
+post_process       12
+select             12
+total              25
+
+Reasons:
+    (check individual jobs above for details)
+    forced:
+        all, post_process, select
+
+This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
+```
+
 - Debugging: maximise the info printe dto screeen during the Snakemake execution,
 ```bash
 $ snakemake --cores <number of cores> --debug
 ```
 - Printing the actual commands run by each rule:
+
 ```bash
 $ snakemake --cores <number of cores> --printshellcmds
 ```
